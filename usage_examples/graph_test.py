@@ -1,25 +1,25 @@
 import pygrad
+from pygrad.tensor import Tensor
 
-a = pygrad.tensor.Tensor([5, 2, 3])
-b = pygrad.tensor.Tensor([10, 20, 30])
+a = Tensor([1, 2, 3])
+b = Tensor([4, 5, 6])
+c = Tensor([7, 8, 9])
 
-c = a + b
+x1 = a + b
+x2 = a + c
 
-g = a + b + c
+x3 = x1 + x2
 
-b = g * a - pygrad.tensor.Tensor(5)
+x4 = x3 + a
+x5 = x1 + x3
 
-b = g.reshape((-1, 1)) @ a.reshape((1, -1))
+x6 = x4 + x5
 
+x7 = x6 + x2
 
+out = x7 + x3
 
-# print(c.created)
-# print(g.created)
+pygrad.utils.draw.print_graph(out)
 
-# print(a, b, c, g)
-# print(g.created.inputs[0].created)
-
-# print(g.created.inputs[0].data.data)
-
-pygrad.utils.draw.print_graph(b)
-
+grad_table = pygrad.optimizers.backprop.backward(out)
+print(grad_table)

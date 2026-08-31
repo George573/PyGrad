@@ -1,10 +1,10 @@
 """PyGrad: lightweight automatic differentiation for Python."""
 
-from . import tensor
+from . import optimizers, tensor, utils
+from .optimizers import backprop
 from .tensor import Tensor
-from . import utils
 from .utils import draw
 
 __version__ = "0.1.0"
 
-__all__ = ["Tensor", "tensor", "utils", "draw", "__version__"]
+__all__ = ["Tensor", "__version__", "draw", "tensor", "utils"]

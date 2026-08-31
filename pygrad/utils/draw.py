@@ -1,25 +1,42 @@
 def print_graph(tensor):
+    """
+    Print the computational graph starting from the given tensor.
+
+    The graph shows:
+    - Each tensor with its data and memory address
+    - Operations that created tensors
+    - Input tensors to each operation (recursively)
+    """
+
     def visit(tensor, prefix="", is_last=True):
+        # Print the tensor itself
         branch = "└── " if is_last else "├── "
         print(prefix + branch + repr(tensor))
 
-        if tensor.created is None:
-            return
+        # If this tensor was created by an operation, show the op and its inputs
+        if tensor.op is not None:
+            op = tensor.op
+            new_prefix = prefix + ("    " if is_last else "│   ")
 
-        op = tensor.created
-        new_prefix = prefix + ("    " if is_last else "│   ")
-        print(new_prefix + "|")
-        print(new_prefix + str(op) + f' ({hex(id(op))})')
+            # Print the operation
+            print(new_prefix + "|")
+            print(new_prefix + str(op) + f" ({hex(id(op))})")
 
-        for i, inp in enumerate(op.inputs):
-            visit(inp, new_prefix, i == len(op.inputs) - 1)
+            # Recursively visit input tensors
+            inputs = tensor.inputs
+            for i, inp in enumerate(inputs):
+                visit(inp, new_prefix, i == len(inputs) - 1)
 
+    # Start printing from the root tensor
     print(repr(tensor))
-    if tensor.created is None:
-        return
 
-    op = tensor.created
-    print("|")
-    print(str(op) + f' ({hex(id(op))})')
-    for i, inp in enumerate(op.inputs):
-        visit(inp, "", i == len(op.inputs) - 1)
+    # If this tensor has an operation, print it and its inputs
+    if tensor.op is not None:
+        op = tensor.op
+        print("|")
+        print(str(op) + f" ({hex(id(op))})")
+
+        # Visit all input tensors
+        inputs = tensor.inputs
+        for i, inp in enumerate(inputs):
+            visit(inp, "", i == len(inputs) - 1)

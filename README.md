@@ -36,6 +36,19 @@ reusable library, keep version ranges in `pyproject.toml` so pip can resolve
 compatible dependencies for each user's platform; use a lockfile for CI and
 local development.
 
+## Code style
+
+Apply safe Ruff refactors, sort imports, and format all Python code with one
+command:
+
+```bash
+make style
+```
+
+To verify style without changing files, run `make style-check`. The underlying
+cross-platform commands are `python scripts/style.py` and
+`python scripts/style.py --check`.
+
 ## Building an installable package
 
 Build source and wheel distributions from the repository root:
