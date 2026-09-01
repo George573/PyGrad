@@ -34,6 +34,20 @@ class Tensor:
     @property
     def size(self):
         return self.data.size
+    
+    def __coerce_operand(self, other):
+        if isinstance(other, Tensor):
+            if other.device != self.device:
+                raise ValueError(
+                    f"Cannot operate on tensor from "
+                    f"{self.device!r} and {other.device!r}"
+                )
+            return other
+
+        if isinstance(other, (int, float, complex)):
+            return Tensor(other, device=self.device)
+
+        return NotImplemented
 
     def __repr__(self):
         return f"Tensor({self.data}) ({hex(id(self))}))"
@@ -47,18 +61,30 @@ class Tensor:
         else:
             raise ValueError("Addition is only supported between Tensors.")
 
+    def __radd__(self, other):
+        return self.__add__(other)
+
     def __sub__(self, other):
         if isinstance(other, Tensor):
             return ops.Sub()(self, other)
         else:
             raise ValueError("Subtraction is only supported between Tensors.")
 
+    def __rsub__(self, other):
+        other = self.__coerce_operand(other)
+        if other is NotImplemented:
+            return NotImplemented
+        return ops.Sub()(other, self)
+    
     def __mul__(self, other):
         if isinstance(other, Tensor):
             return ops.Mul()(self, other)
         else:
             raise ValueError("Multiplication is only supported between Tensors.")
 
+    def __rmul__(self, other):
+        return self.__mul__(other)
+    
     def __matmul__(self, other):
         if isinstance(other, Tensor):
             return ops.MatMul()(self, other)
@@ -71,6 +97,12 @@ class Tensor:
         else:
             raise ValueError("Division is only supported between Tensors.")
 
+    def __rtruediv__(self, other):
+        other = self._coerce_operand(other)
+        if other is NotImplemented:
+            return NotImplemented
+        return ops.Div()(other, self)
+    
     def __neg__(self):
         return ops.Neg()(self)
 
@@ -80,6 +112,12 @@ class Tensor:
         if isinstance(other, int) or isinstance(other, float):
             return ops.Pow()(self, Tensor(other))
         raise ValueError("Exponentiation is only supported between Tensors or scalars.")
+
+    def __rpow__(self, other):
+        other = self._coerce_operand(other)
+        if other is NotImplemented:
+            return NotImplemented
+        return ops.Pow()(other, self)
 
     def reshape(self, shape):
         if isinstance(shape, tuple) or isinstance(shape, int):

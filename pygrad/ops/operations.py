@@ -58,14 +58,36 @@ class MatMul(Ops):
     def backward(self, grad):
         a, b = self.inputs
 
-        grad_a = grad @ b.data.swapaxes(-1, -2)
-        grad_b = a.data.swapaxes(-1, -2) @ grad
+        a_was_vector = a.ndim == 1
+        b_was_vector = b.ndim == 1
+
+        # Promote vectors to matrices.
+        a_data = a.data[None, :] if a_was_vector else a.data
+        b_data = b.data[:, None] if b_was_vector else b.data
+
+        # Promote output gradient back to matrix form.
+        if a_was_vector and b_was_vector:
+            grad = grad.reshape(1, 1)
+        elif a_was_vector:
+            grad = grad[..., None, :]
+        elif b_was_vector:
+            grad = grad[..., :, None]
+
+        grad_a = grad @ b_data.swapaxes(-1, -2)
+        grad_b = a_data.swapaxes(-1, -2) @ grad
+
+        # Undo the temporary vector -> matrix promotion.
+        if a_was_vector:
+            grad_a = grad_a.squeeze(-2)
+
+        if b_was_vector:
+            grad_b = grad_b.squeeze(-1)
 
         return (
             unbroadcast(grad_a, a.shape),
             unbroadcast(grad_b, b.shape),
         )
-
+        
     def __call__(self, a, b):
         self.inputs = (a, b)
         result = self.forward()
