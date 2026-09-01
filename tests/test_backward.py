@@ -54,6 +54,44 @@ def test_backward_matrix_multiplication_gradients():
     np.testing.assert_allclose(gradients[right], left.data.T @ upstream)
 
 
+@pytest.mark.parametrize(
+    ("left_data", "right_data"),
+    [
+        ([1.0, 2.0, 3.0], [4.0, 5.0, 6.0]),
+        ([1.0, 2.0], [[3.0, 4.0, 5.0], [6.0, 7.0, 8.0]]),
+        ([[1.0, 2.0], [3.0, 4.0]], [5.0, 6.0]),
+    ],
+)
+def test_backward_matrix_multiplication_with_vectors(left_data, right_data):
+    left = Tensor(np.array(left_data))
+    right = Tensor(np.array(right_data))
+    result = left @ right
+    upstream = np.ones_like(result.data)
+
+    gradients = backward(result, upstream)
+
+    def objective(left_value, right_value):
+        return np.sum((left_value @ right_value) * upstream)
+
+    epsilon = 1e-6
+    for tensor, other, gradient, is_left in (
+        (left, right, gradients[left], True),
+        (right, left, gradients[right], False),
+    ):
+        expected = np.empty_like(tensor.data)
+        for index in np.ndindex(tensor.shape):
+            plus = tensor.data.copy()
+            minus = tensor.data.copy()
+            plus[index] += epsilon
+            minus[index] -= epsilon
+            args_plus = (plus, other.data) if is_left else (other.data, plus)
+            args_minus = (minus, other.data) if is_left else (other.data, minus)
+            expected[index] = (objective(*args_plus) - objective(*args_minus)) / (
+                2 * epsilon
+            )
+        np.testing.assert_allclose(gradient, expected, rtol=1e-6, atol=1e-6)
+
+
 def test_backward_division_gradients_with_broadcasting():
     numerator = Tensor(np.array([[2.0], [4.0]]))
     denominator = Tensor(np.array([[1.0, 2.0, 4.0]]))
@@ -63,9 +101,9 @@ def test_backward_division_gradients_with_broadcasting():
     gradients = backward(result, upstream)
 
     expected_numerator = (upstream / denominator.data).sum(axis=1, keepdims=True)
-    expected_denominator = (
-        -upstream * numerator.data / denominator.data**2
-    ).sum(axis=0, keepdims=True)
+    expected_denominator = (-upstream * numerator.data / denominator.data**2).sum(
+        axis=0, keepdims=True
+    )
     np.testing.assert_allclose(gradients[numerator], expected_numerator)
     np.testing.assert_allclose(gradients[denominator], expected_denominator)
 
@@ -87,12 +125,12 @@ def test_backward_power_gradients_with_broadcasting():
 
     gradients = backward(result, upstream)
 
-    expected_base = (
-        upstream * exponent.data * base.data ** (exponent.data - 1)
-    ).sum(axis=1, keepdims=True)
-    expected_exponent = (
-        upstream * result.data * np.log(base.data)
-    ).sum(axis=0, keepdims=True)
+    expected_base = (upstream * exponent.data * base.data ** (exponent.data - 1)).sum(
+        axis=1, keepdims=True
+    )
+    expected_exponent = (upstream * result.data * np.log(base.data)).sum(
+        axis=0, keepdims=True
+    )
     np.testing.assert_allclose(gradients[base], expected_base)
     np.testing.assert_allclose(gradients[exponent], expected_exponent)
 

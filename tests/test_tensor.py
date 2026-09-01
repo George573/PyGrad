@@ -24,3 +24,12 @@ def test_operation_connects_both_sides_of_computation_graph():
     assert left.outputs == [result]
     assert right.outputs == [result]
     assert result.outputs == []
+
+
+def test_operations_reject_tensors_on_different_devices():
+    left = Tensor(1.0)
+    right = Tensor(2.0)
+    right.device = "cuda"
+
+    with np.testing.assert_raises_regex(ValueError, "Cannot operate on tensor"):
+        left + right

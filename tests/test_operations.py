@@ -102,3 +102,37 @@ def test_transpose_values_with_explicit_axes():
     np.testing.assert_allclose(result.data, value.data.transpose((2, 0, 1)))
     assert isinstance(result.op, ops.Transpose)
     assert result.shape == (4, 2, 3)
+
+
+@pytest.mark.parametrize(
+    ("operation", "expected"),
+    [
+        (lambda value: value + 2, 6.0),
+        (lambda value: 2 + value, 6.0),
+        (lambda value: value - 2, 2.0),
+        (lambda value: 2 - value, -2.0),
+        (lambda value: value * 2, 8.0),
+        (lambda value: 2 * value, 8.0),
+        (lambda value: value / 2, 2.0),
+        (lambda value: 2 / value, 0.5),
+        (lambda value: value**2, 16.0),
+        (lambda value: 2**value, 16.0),
+    ],
+)
+def test_binary_operations_accept_scalars_on_either_side(operation, expected):
+    result = operation(Tensor(4.0))
+
+    np.testing.assert_allclose(result.data, expected)
+    assert result.device == "cpu"
+
+
+def test_compatibility_exports_are_canonical_classes():
+    from pygrad.ops.arithmetic import Add
+    from pygrad.ops.elementwise import Neg
+    from pygrad.ops.reductions import Sum
+    from pygrad.ops.shape import Reshape
+
+    assert ops.Add is Add
+    assert ops.Neg is Neg
+    assert ops.Sum is Sum
+    assert ops.Reshape is Reshape

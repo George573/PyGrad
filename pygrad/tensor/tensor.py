@@ -1,7 +1,10 @@
 from typing import Literal
 
-import pygrad.ops.operations as ops
 from pygrad import backend
+from pygrad.ops.arithmetic import Add, Div, MatMul, Mul, Pow, Sub
+from pygrad.ops.elementwise import Abs, Exp, Log, Neg, ReLU, Sigmoid, Sqrt, Tanh
+from pygrad.ops.reductions import Mean, Sum
+from pygrad.ops.shape import Flatten, Reshape, Transpose
 
 
 class Tensor:
@@ -14,14 +17,14 @@ class Tensor:
         data,
         device: Literal["cpu", "cuda"] = "cpu",
         op=None,
-        inputs: list = None,
-        outputs: list = None,
+        inputs: list | None = None,
+        outputs: list | None = None,
     ):
         self.data = backend.as_array(data, device=device)
         self.device = device
         self.op = op
-        self.inputs = list() if inputs is None else inputs
-        self.outputs = list() if outputs is None else outputs
+        self.inputs = [] if inputs is None else inputs
+        self.outputs = [] if outputs is None else outputs
 
     @property
     def shape(self):
@@ -34,8 +37,8 @@ class Tensor:
     @property
     def size(self):
         return self.data.size
-    
-    def __coerce_operand(self, other):
+
+    def _coerce_operand(self, other):
         if isinstance(other, Tensor):
             if other.device != self.device:
                 raise ValueError(
@@ -56,83 +59,106 @@ class Tensor:
         return f"Tensor({self.data})"
 
     def __add__(self, other):
-        if isinstance(other, Tensor):
-            return ops.Add()(self, other)
-        else:
-            raise ValueError("Addition is only supported between Tensors.")
+        other = self._coerce_operand(other)
+        if other is NotImplemented:
+            return NotImplemented
+        return Add()(self, other)
 
     def __radd__(self, other):
         return self.__add__(other)
 
     def __sub__(self, other):
-        if isinstance(other, Tensor):
-            return ops.Sub()(self, other)
-        else:
-            raise ValueError("Subtraction is only supported between Tensors.")
-
-    def __rsub__(self, other):
-        other = self.__coerce_operand(other)
+        other = self._coerce_operand(other)
         if other is NotImplemented:
             return NotImplemented
-        return ops.Sub()(other, self)
-    
+        return Sub()(self, other)
+
+    def __rsub__(self, other):
+        other = self._coerce_operand(other)
+        if other is NotImplemented:
+            return NotImplemented
+        return Sub()(other, self)
+
     def __mul__(self, other):
-        if isinstance(other, Tensor):
-            return ops.Mul()(self, other)
-        else:
-            raise ValueError("Multiplication is only supported between Tensors.")
+        other = self._coerce_operand(other)
+        if other is NotImplemented:
+            return NotImplemented
+        return Mul()(self, other)
 
     def __rmul__(self, other):
         return self.__mul__(other)
-    
+
     def __matmul__(self, other):
-        if isinstance(other, Tensor):
-            return ops.MatMul()(self, other)
-        else:
-            raise ValueError("Matrix multiplication is only supported between Tensors.")
+        if not isinstance(other, Tensor):
+            return NotImplemented
+        other = self._coerce_operand(other)
+        return MatMul()(self, other)
 
     def __truediv__(self, other):
-        if isinstance(other, Tensor):
-            return ops.Div()(self, other)
-        else:
-            raise ValueError("Division is only supported between Tensors.")
+        other = self._coerce_operand(other)
+        if other is NotImplemented:
+            return NotImplemented
+        return Div()(self, other)
 
     def __rtruediv__(self, other):
         other = self._coerce_operand(other)
         if other is NotImplemented:
             return NotImplemented
-        return ops.Div()(other, self)
-    
+        return Div()(other, self)
+
     def __neg__(self):
-        return ops.Neg()(self)
+        return Neg()(self)
+
+    def __abs__(self):
+        return Abs()(self)
 
     def __pow__(self, other):
-        if isinstance(other, Tensor):
-            return ops.Pow()(self, other)
-        if isinstance(other, int) or isinstance(other, float):
-            return ops.Pow()(self, Tensor(other))
-        raise ValueError("Exponentiation is only supported between Tensors or scalars.")
+        other = self._coerce_operand(other)
+        if other is NotImplemented:
+            return NotImplemented
+        return Pow()(self, other)
 
     def __rpow__(self, other):
         other = self._coerce_operand(other)
         if other is NotImplemented:
             return NotImplemented
-        return ops.Pow()(other, self)
+        return Pow()(other, self)
 
     def reshape(self, shape):
-        if isinstance(shape, tuple) or isinstance(shape, int):
-            return ops.Reshape()(self, shape)
+        if isinstance(shape, (tuple, int)):
+            return Reshape()(self, shape)
         else:
-            raise ValueError("Shape must be a tuple or an integer.")
+            raise TypeError("Shape must be a tuple or an integer.")
 
     def flatten(self):
-        return ops.Flatten()(self)
+        return Flatten()(self)
 
     def transpose(self, axes=None):
-        return ops.Transpose()(self, axes)
+        return Transpose()(self, axes)
 
     def sum(self, axis=None, keepdims=False):
-        return ops.Sum()(self, axis=axis, keepdims=keepdims)
+        return Sum()(self, axis=axis, keepdims=keepdims)
 
     def mean(self, axis=None, keepdims=False):
-        return ops.Mean()(self, axis=axis, keepdims=keepdims)
+        return Mean()(self, axis=axis, keepdims=keepdims)
+
+    def exp(self):
+        return Exp()(self)
+
+    def log(self):
+        return Log()(self)
+
+    def sqrt(self):
+        return Sqrt()(self)
+
+    def abs(self):
+        return Abs()(self)
+
+    def tanh(self):
+        return Tanh()(self)
+
+    def sigmoid(self):
+        return Sigmoid()(self)
+
+    def relu(self):
+        return ReLU()(self)

@@ -6,7 +6,13 @@ class Ops:
     def create_tensor(data, op, input_tensors):
         from pygrad.tensor.tensor import Tensor
 
-        output_tensor = Tensor(data, op=op, inputs=input_tensors)
+        device = input_tensors[0].device
+        if any(tensor.device != device for tensor in input_tensors[1:]):
+            raise ValueError(
+                "Cannot create an operation from tensors on different devices"
+            )
+
+        output_tensor = Tensor(data, device=device, op=op, inputs=input_tensors)
         for tensor in input_tensors:
             tensor.outputs.append(output_tensor)
         return output_tensor
