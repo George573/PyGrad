@@ -17,3 +17,23 @@ def unbroadcast(tensor, shape):
         tensor = tensor.sum(axis=axes, keepdims=True)
 
     return tensor.reshape(shape)
+
+
+def restore_reduced_dims(array, input_ndim, axis, keepdims):
+    if axis is None or keepdims:
+        return array
+
+    if isinstance(axis, int):
+        axis = (axis,)
+
+    axis = tuple(
+        ax if ax >= 0 else ax + input_ndim
+        for ax in axis
+    )
+
+    for ax in sorted(axis):
+        array = array.reshape(
+            array.shape[:ax] + (1,) + array.shape[ax:]
+        )
+
+    return array
