@@ -44,7 +44,7 @@ def backward(last_node, gradient=None):
                 f"gradient shape {gradient.shape} does not match "
                 f"output shape {last_node.shape}"
             )
-    grad_table = {last_node: gradient}
+    last_node.grad = gradient
 
     wait_queue = deque()
     wait_queue.append(last_node)
@@ -55,15 +55,14 @@ def backward(last_node, gradient=None):
 
         if n.op is None:
             continue
-        input_grad = n.op.backward(grad_table[n])
+        input_grad = n.op.backward(n.grad)
         for p, p_grad in zip(n.op.inputs, input_grad):
             if not p.requires_grad:
                 continue
-            if p in grad_table:
-                grad_table[p] = grad_table[p] + p_grad
+            if p.grad is not None:
+                p.grad = p.grad + p_grad
             else:
-                grad_table[p] = p_grad
+                p.grad = p_grad
             pending[p] -= 1
             if pending[p] == 0:
                 wait_queue.append(p)
-    return grad_table

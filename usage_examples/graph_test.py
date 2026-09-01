@@ -21,5 +21,5 @@ out = x7 + x3
 
 pygrad.utils.draw.print_graph(out)
 
-grad_table = pygrad.optimizers.backprop.backward(out)
-print(grad_table)
+pygrad.optimizers.backprop.backward(out, [1, 1, 1])
+pygrad.utils.draw.print_graph_with_gradients(out)

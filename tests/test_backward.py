@@ -17,23 +17,23 @@ def test_backward_accumulates_shared_graph_gradients():
     y = x * a
     z = y + x
 
-    gradients = backward(z)
+    backward(z)
 
-    np.testing.assert_allclose(gradients[z], [[1.0]])
-    np.testing.assert_allclose(gradients[y], [[1.0]])
-    np.testing.assert_allclose(gradients[x], [[3.0]])
-    np.testing.assert_allclose(gradients[a], [[15.0]])
-    np.testing.assert_allclose(gradients[b], [[6.0]])
+    np.testing.assert_allclose(z.grad, [[1.0]])
+    np.testing.assert_allclose(y.grad, [[1.0]])
+    np.testing.assert_allclose(x.grad, [[3.0]])
+    np.testing.assert_allclose(a.grad, [[15.0]])
+    np.testing.assert_allclose(b.grad, [[6.0]])
 
 
 def test_backward_ignores_inputs_not_requiring_gradients():
     variable = Tensor(2.0)
     constant = _Tensor(3.0)
 
-    gradients = backward(variable * constant)
+    backward(variable * constant)
 
-    np.testing.assert_allclose(gradients[variable], 3.0)
-    assert constant not in gradients
+    np.testing.assert_allclose(variable.grad, 3.0)
+    assert not hasattr(constant, "grad")
 
 
 def test_backward_reduces_broadcast_gradients():
@@ -41,19 +41,19 @@ def test_backward_reduces_broadcast_gradients():
     matrix = Tensor(np.ones((3, 4)))
     result = column + matrix
 
-    gradients = backward(result, np.ones_like(result.data))
+    backward(result, np.ones_like(result.data))
 
-    np.testing.assert_allclose(gradients[column], np.full((3, 1), 4.0))
-    np.testing.assert_allclose(gradients[matrix], np.ones((3, 4)))
+    np.testing.assert_allclose(column.grad, np.full((3, 1), 4.0))
+    np.testing.assert_allclose(matrix.grad, np.ones((3, 4)))
 
 
 def test_backward_uses_explicit_upstream_gradient():
     value = Tensor(np.array([2.0, 3.0]))
     result = value * value
 
-    gradients = backward(result, np.array([1.0, 2.0]))
+    backward(result, np.array([1.0, 2.0]))
 
-    np.testing.assert_allclose(gradients[value], np.array([4.0, 12.0]))
+    np.testing.assert_allclose(value.grad, np.array([4.0, 12.0]))
 
 
 def test_backward_matrix_multiplication_gradients():
@@ -62,10 +62,10 @@ def test_backward_matrix_multiplication_gradients():
     result = left @ right
     upstream = np.array([[1.0, 2.0], [3.0, 4.0]])
 
-    gradients = backward(result, upstream)
+    backward(result, upstream)
 
-    np.testing.assert_allclose(gradients[left], upstream @ right.data.T)
-    np.testing.assert_allclose(gradients[right], left.data.T @ upstream)
+    np.testing.assert_allclose(left.grad, upstream @ right.data.T)
+    np.testing.assert_allclose(right.grad, left.data.T @ upstream)
 
 
 @pytest.mark.parametrize(
@@ -82,15 +82,15 @@ def test_backward_matrix_multiplication_with_vectors(left_data, right_data):
     result = left @ right
     upstream = np.ones_like(result.data)
 
-    gradients = backward(result, upstream)
+    backward(result, upstream)
 
     def objective(left_value, right_value):
         return np.sum((left_value @ right_value) * upstream)
 
     epsilon = 1e-6
     for tensor, other, gradient, is_left in (
-        (left, right, gradients[left], True),
-        (right, left, gradients[right], False),
+        (left, right, left.grad, True),
+        (right, left, right.grad, False),
     ):
         expected = np.empty_like(tensor.data)
         for index in np.ndindex(tensor.shape):
@@ -112,23 +112,23 @@ def test_backward_division_gradients_with_broadcasting():
     result = numerator / denominator
     upstream = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
 
-    gradients = backward(result, upstream)
+    backward(result, upstream)
 
     expected_numerator = (upstream / denominator.data).sum(axis=1, keepdims=True)
     expected_denominator = (-upstream * numerator.data / denominator.data**2).sum(
         axis=0, keepdims=True
     )
-    np.testing.assert_allclose(gradients[numerator], expected_numerator)
-    np.testing.assert_allclose(gradients[denominator], expected_denominator)
+    np.testing.assert_allclose(numerator.grad, expected_numerator)
+    np.testing.assert_allclose(denominator.grad, expected_denominator)
 
 
 def test_backward_negation_gradients():
     value = Tensor(np.array([1.0, -2.0, 3.0]))
     upstream = np.array([2.0, 4.0, 6.0])
 
-    gradients = backward(-value, upstream)
+    backward(-value, upstream)
 
-    np.testing.assert_allclose(gradients[value], -upstream)
+    np.testing.assert_allclose(value.grad, -upstream)
 
 
 def test_backward_power_gradients_with_broadcasting():
@@ -137,7 +137,7 @@ def test_backward_power_gradients_with_broadcasting():
     result = base**exponent
     upstream = np.array([[1.0, 2.0], [3.0, 4.0]])
 
-    gradients = backward(result, upstream)
+    backward(result, upstream)
 
     expected_base = (upstream * exponent.data * base.data ** (exponent.data - 1)).sum(
         axis=1, keepdims=True
@@ -145,8 +145,8 @@ def test_backward_power_gradients_with_broadcasting():
     expected_exponent = (upstream * result.data * np.log(base.data)).sum(
         axis=0, keepdims=True
     )
-    np.testing.assert_allclose(gradients[base], expected_base)
-    np.testing.assert_allclose(gradients[exponent], expected_exponent)
+    np.testing.assert_allclose(base.grad, expected_base)
+    np.testing.assert_allclose(exponent.grad, expected_exponent)
 
 
 @pytest.mark.parametrize("method", ["reshape", "flatten"])
@@ -155,9 +155,9 @@ def test_backward_shape_operation_gradients(method):
     result = value.reshape((3, 2)) if method == "reshape" else value.flatten()
     upstream = np.arange(1.0, 7.0).reshape(result.shape)
 
-    gradients = backward(result, upstream)
+    backward(result, upstream)
 
-    np.testing.assert_allclose(gradients[value], upstream.reshape(value.shape))
+    np.testing.assert_allclose(value.grad, upstream.reshape(value.shape))
 
 
 @pytest.mark.parametrize("axes", [None, (2, 0, 1)])
@@ -166,14 +166,14 @@ def test_backward_transpose_gradients(axes):
     result = value.transpose(axes)
     upstream = np.arange(24.0).reshape(result.shape)
 
-    gradients = backward(result, upstream)
+    backward(result, upstream)
 
     if axes is None:
         expected = upstream.transpose()
     else:
         inverse_axes = np.argsort(axes)
         expected = upstream.transpose(inverse_axes)
-    np.testing.assert_allclose(gradients[value], expected)
+    np.testing.assert_allclose(value.grad, expected)
 
 
 @pytest.mark.parametrize(
@@ -194,14 +194,14 @@ def test_backward_reduction_gradients(method, axis, keepdims, scale):
     result = getattr(value, method)(axis=axis, keepdims=keepdims)
     upstream = np.arange(1.0, result.size + 1.0).reshape(result.shape)
 
-    gradients = backward(result, upstream)
+    backward(result, upstream)
 
     expanded = upstream
     if axis is not None and not keepdims:
         axes = (axis,) if isinstance(axis, int) else axis
         expanded = np.expand_dims(upstream, axis=axes)
     expected = np.broadcast_to(expanded / scale, value.shape)
-    np.testing.assert_allclose(gradients[value], expected)
+    np.testing.assert_allclose(value.grad, expected)
 
 
 def test_backward_requires_gradient_for_multi_element_output():

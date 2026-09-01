@@ -122,25 +122,23 @@ def test_cuda_composed_backward_and_gradient_device():
     sigmoid = value.sigmoid()
     loss = (sigmoid * value + 2).mean()
 
-    gradient = backward(loss)[value]
+    backward(loss)
     sigmoid_cpu = 1 / (1 + np.exp(-np.array([1.0, 2.0, 3.0])))
     expected = (
         sigmoid_cpu + np.array([1.0, 2.0, 3.0]) * sigmoid_cpu * (1 - sigmoid_cpu)
     ) / 3
 
-    assert isinstance(gradient, cp.ndarray)
-    np.testing.assert_allclose(cp.asnumpy(gradient), expected, rtol=1e-6, atol=1e-7)
+    assert isinstance(value.grad, cp.ndarray)
+    np.testing.assert_allclose(cp.asnumpy(value.grad), expected, rtol=1e-6, atol=1e-7)
 
 
 def test_cuda_matrix_vector_backward():
-    left = Tensor(
-        [[1.0, 2.0], [3.0, 4.0]], device="cuda", requires_grad=True
-    )
+    left = Tensor([[1.0, 2.0], [3.0, 4.0]], device="cuda", requires_grad=True)
     right = Tensor([5.0, 6.0], device="cuda", requires_grad=True)
 
-    gradients = backward((left @ right).sum())
+    backward((left @ right).sum())
 
-    assert isinstance(gradients[left], cp.ndarray)
-    assert isinstance(gradients[right], cp.ndarray)
-    np.testing.assert_allclose(cp.asnumpy(gradients[left]), [[5.0, 6.0], [5.0, 6.0]])
-    np.testing.assert_allclose(cp.asnumpy(gradients[right]), [4.0, 6.0])
+    assert isinstance(left.grad, cp.ndarray)
+    assert isinstance(right.grad, cp.ndarray)
+    np.testing.assert_allclose(cp.asnumpy(left.grad), [[5.0, 6.0], [5.0, 6.0]])
+    np.testing.assert_allclose(cp.asnumpy(right.grad), [4.0, 6.0])

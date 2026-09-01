@@ -10,16 +10,16 @@ x = a * b  # x = ab
 y = x * a  # y = a²b
 z = y + x  # z = a²b + ab
 
-grad_table = backward(z)
+backward(z)
 
 print("z:")
 print(z.data)
 
 print("grad a:")
-print(grad_table[a])
+print(a.grad)
 
 print("grad b:")
-print(grad_table[b])
+print(b.grad)
 
 print("grad x:")
-print(grad_table[x])
+print(x.grad)

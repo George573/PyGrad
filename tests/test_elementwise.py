@@ -52,10 +52,10 @@ def test_elementwise_backward_supports_scalar_tensors(method, value, expected_gr
     input_tensor = Tensor(value, requires_grad=True)
     result = getattr(input_tensor, method)()
 
-    gradients = backward(result)
+    backward(result)
 
-    np.testing.assert_allclose(gradients[input_tensor], expected_gradient)
-    assert gradients[input_tensor].shape == ()
+    np.testing.assert_allclose(input_tensor.grad, expected_gradient)
+    assert input_tensor.grad.shape == ()
 
 
 @pytest.mark.parametrize(
@@ -65,16 +65,16 @@ def test_elementwise_backward_supports_scalar_tensors(method, value, expected_gr
 def test_nondifferentiable_zero_uses_zero_subgradient(method, expected_gradient):
     value = Tensor(0.0, requires_grad=True)
 
-    gradients = backward(getattr(value, method)())
+    backward(getattr(value, method)())
 
-    np.testing.assert_allclose(gradients[value], expected_gradient)
+    np.testing.assert_allclose(value.grad, expected_gradient)
 
 
 def test_sigmoid_is_stable_for_large_magnitudes():
     value = Tensor(np.array([-1000.0, 1000.0]), requires_grad=True)
 
     result = value.sigmoid()
-    gradients = backward(result, np.ones_like(result.data))
+    backward(result, np.ones_like(result.data))
 
     np.testing.assert_allclose(result.data, [0.0, 1.0], atol=1e-15)
-    np.testing.assert_allclose(gradients[value], [0.0, 0.0], atol=1e-15)
+    np.testing.assert_allclose(value.grad, [0.0, 0.0], atol=1e-15)

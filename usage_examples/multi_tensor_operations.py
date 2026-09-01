@@ -46,7 +46,7 @@ reordered = powered.reshape((2, 2)).transpose((1, 0)).flatten()
 
 # A scalar output lets backward() create the initial gradient automatically.
 loss = -reordered.mean()
-gradients = backward(loss)
+backward(loss)
 
 print("forward operation outputs:")
 for name, tensor in (
@@ -71,4 +71,4 @@ for name, tensor in (
     ("exponent", exponent),
 ):
     print(f"\ngradient for {name}:")
-    print(gradients[tensor])
+    print(tensor.grad)

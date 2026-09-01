@@ -38,9 +38,7 @@ class Transpose(Ops):
     def backward(self, grad):
         if self.axes is None:
             return (grad.transpose(),)
-        inverse_axes = tuple(
-            sorted(range(len(self.axes)), key=self.axes.__getitem__)
-        )
+        inverse_axes = tuple(sorted(range(len(self.axes)), key=self.axes.__getitem__))
         return (grad.transpose(inverse_axes),)
 
     def __call__(self, a, axes=None):

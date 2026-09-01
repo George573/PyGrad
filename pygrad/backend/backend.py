@@ -18,12 +18,12 @@ def is_array(obj):
 
 def as_array(obj, device: Literal["cpu", "cuda"] = "cpu"):
     if device == "cpu":
-        return np.asarray(obj)
+        return np.asarray(obj, dtype=np.float32)
 
     if device == "cuda":
         if cp is None:
             raise ValueError("CUDA backend requires CuPy. Install pygrad[gpu].")
-        return cp.asarray(obj)
+        return cp.asarray(obj, dtype=cp.float32)
 
     raise ValueError(f"Unknown device: {device}")
 
