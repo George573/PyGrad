@@ -5,7 +5,6 @@ import numpy as np
 from pygrad import Tensor
 from pygrad.optimizers.backprop import backward
 
-
 # Five independent inputs with different shapes. Broadcasting allows bias and
 # scale to participate in the same graph as the matrices.
 features = Tensor(
@@ -14,7 +13,9 @@ features = Tensor(
             [1.0, -2.0, 0.5],
             [0.0, 3.0, -1.0],
         ]
-    )
+    ),
+    device="cuda",
+    requires_grad=True,
 )
 weights = Tensor(
     np.array(
@@ -23,12 +24,14 @@ weights = Tensor(
             [1.5, 0.25],
             [-0.5, 2.0],
         ]
-    )
+    ),
+    device="cuda",
+    requires_grad=True,
 )
-bias = Tensor(np.array([[0.1, -0.2]]))
-scale = Tensor(np.array(2.0))
-exponent = Tensor(np.array(2.0))
-one = Tensor(np.array(1.0))
+bias = Tensor(np.array([[0.1, -0.2]]), device="cuda", requires_grad=True)
+scale = Tensor(np.array(2.0), device="cuda", requires_grad=True)
+exponent = Tensor(np.array(2.0), device="cuda", requires_grad=True)
+one = Tensor(np.array(1.0), device="cuda")
 
 # Matrix multiplication, broadcasting, and several element-wise branches.
 linear = features @ weights + bias

@@ -18,13 +18,15 @@ class Tensor:
         device: Literal["cpu", "cuda"] = "cpu",
         op=None,
         inputs: list | None = None,
-        outputs: list | None = None,
+        requires_grad: bool = False,
     ):
         self.data = backend.as_array(data, device=device)
         self.device = device
         self.op = op
         self.inputs = [] if inputs is None else inputs
-        self.outputs = [] if outputs is None else outputs
+        self.requires_grad = requires_grad
+        if self.requires_grad:
+            self.grad = None
 
     @property
     def shape(self):

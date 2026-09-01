@@ -3,8 +3,8 @@ import numpy as np
 from pygrad import Tensor
 from pygrad.optimizers.backprop import backward
 
-a = Tensor(np.array([[2.0]]))
-b = Tensor(np.array([[3.0]]))
+a = Tensor(np.array([[2.0]]), requires_grad=True)
+b = Tensor(np.array([[3.0]]), requires_grad=True)
 
 x = a * b  # x = ab
 y = x * a  # y = a²b

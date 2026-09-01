@@ -36,3 +36,6 @@ target-version = "py310"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "cuda: tests that require CuPy and a CUDA-capable GPU",
+]

@@ -49,7 +49,7 @@ def test_abs_builtin_uses_elementwise_operation():
     ],
 )
 def test_elementwise_backward_supports_scalar_tensors(method, value, expected_gradient):
-    input_tensor = Tensor(value)
+    input_tensor = Tensor(value, requires_grad=True)
     result = getattr(input_tensor, method)()
 
     gradients = backward(result)
@@ -63,7 +63,7 @@ def test_elementwise_backward_supports_scalar_tensors(method, value, expected_gr
     [("abs", 0.0), ("relu", 0.0)],
 )
 def test_nondifferentiable_zero_uses_zero_subgradient(method, expected_gradient):
-    value = Tensor(0.0)
+    value = Tensor(0.0, requires_grad=True)
 
     gradients = backward(getattr(value, method)())
 
@@ -71,7 +71,7 @@ def test_nondifferentiable_zero_uses_zero_subgradient(method, expected_gradient)
 
 
 def test_sigmoid_is_stable_for_large_magnitudes():
-    value = Tensor(np.array([-1000.0, 1000.0]))
+    value = Tensor(np.array([-1000.0, 1000.0]), requires_grad=True)
 
     result = value.sigmoid()
     gradients = backward(result, np.ones_like(result.data))

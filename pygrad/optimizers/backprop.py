@@ -57,6 +57,8 @@ def backward(last_node, gradient=None):
             continue
         input_grad = n.op.backward(grad_table[n])
         for p, p_grad in zip(n.op.inputs, input_grad):
+            if not p.requires_grad:
+                continue
             if p in grad_table:
                 grad_table[p] = grad_table[p] + p_grad
             else:

@@ -12,10 +12,14 @@ class Ops:
                 "Cannot create an operation from tensors on different devices"
             )
 
-        output_tensor = Tensor(data, device=device, op=op, inputs=input_tensors)
-        for tensor in input_tensors:
-            tensor.outputs.append(output_tensor)
-        return output_tensor
+        inputs = tuple(tensor for tensor in input_tensors if tensor.requires_grad)
+        return Tensor(
+            data,
+            device=device,
+            op=op,
+            inputs=inputs or None,
+            requires_grad=bool(inputs),
+        )
 
     def __repr__(self):
         return f"{self.__class__.__name__}({', '.join(map(str, self.inputs))})"

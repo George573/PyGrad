@@ -13,17 +13,39 @@ def test_tensor_exposes_array_metadata():
     assert tensor.device == "cpu"
 
 
-def test_operation_connects_both_sides_of_computation_graph():
+def test_operation_does_not_track_inputs_without_gradients():
     left = Tensor(np.array([1.0, 2.0]))
     right = Tensor(np.array([3.0, 4.0]))
 
     result = left + right
 
     assert isinstance(result.op, ops.Add)
-    assert result.inputs == (left, right)
-    assert left.outputs == [result]
-    assert right.outputs == [result]
-    assert result.outputs == []
+    assert result.inputs == []
+    assert result.requires_grad is False
+    assert result.op.inputs == (left, right)
+
+
+def test_operation_tracks_only_inputs_requiring_gradients():
+    constant = Tensor(np.array([1.0, 2.0]))
+    variable = Tensor(np.array([3.0, 4.0]), requires_grad=True)
+
+    result = constant + variable
+
+    assert result.inputs == (variable,)
+    assert result.requires_grad is True
+    assert result.grad is None
+
+
+def test_requires_grad_is_inherited_through_operations():
+    variable = Tensor(2.0, requires_grad=True)
+
+    intermediate = variable * 3
+    result = intermediate + Tensor(4.0)
+
+    assert intermediate.requires_grad is True
+    assert intermediate.inputs == (variable,)
+    assert result.requires_grad is True
+    assert result.inputs == (intermediate,)
 
 
 def test_operations_reject_tensors_on_different_devices():

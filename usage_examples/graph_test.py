@@ -1,9 +1,9 @@
 import pygrad
 from pygrad.tensor import Tensor
 
-a = Tensor([1, 2, 3])
-b = Tensor([4, 5, 6])
-c = Tensor([7, 8, 9])
+a = Tensor([1, 2, 3], requires_grad=True)
+b = Tensor([4, 5, 6], requires_grad=True)
+c = Tensor([7, 8, 9], requires_grad=True)
 
 x1 = a + b
 x2 = a + c

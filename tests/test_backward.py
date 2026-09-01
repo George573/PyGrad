@@ -1,8 +1,12 @@
 import numpy as np
 import pytest
 
-from pygrad import Tensor
+from pygrad import Tensor as _Tensor
 from pygrad.optimizers.backprop import backward
+
+
+def Tensor(data, **kwargs):
+    return _Tensor(data, requires_grad=True, **kwargs)
 
 
 def test_backward_accumulates_shared_graph_gradients():
@@ -20,6 +24,16 @@ def test_backward_accumulates_shared_graph_gradients():
     np.testing.assert_allclose(gradients[x], [[3.0]])
     np.testing.assert_allclose(gradients[a], [[15.0]])
     np.testing.assert_allclose(gradients[b], [[6.0]])
+
+
+def test_backward_ignores_inputs_not_requiring_gradients():
+    variable = Tensor(2.0)
+    constant = _Tensor(3.0)
+
+    gradients = backward(variable * constant)
+
+    np.testing.assert_allclose(gradients[variable], 3.0)
+    assert constant not in gradients
 
 
 def test_backward_reduces_broadcast_gradients():
