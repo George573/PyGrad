@@ -5,6 +5,7 @@ from pygrad.ops.arithmetic import Add, Div, MatMul, Mul, Pow, Sub
 from pygrad.ops.elementwise import Abs, Exp, Log, Neg, ReLU, Sigmoid, Sqrt, Tanh
 from pygrad.ops.reductions import Mean, Sum
 from pygrad.ops.shape import Flatten, Reshape, Transpose
+from pygrad.backend.backend import is_array
 
 
 class Tensor:
@@ -12,6 +13,8 @@ class Tensor:
     A class representing a tensor in PyGrad.
     """
 
+    __array_priority__ = 1000
+    
     def __init__(
         self,
         data,
@@ -50,6 +53,9 @@ class Tensor:
             return other
 
         if isinstance(other, (int, float, complex)):
+            return Tensor(other, device=self.device)
+
+        if is_array(other):
             return Tensor(other, device=self.device)
 
         return NotImplemented
