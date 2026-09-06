@@ -97,10 +97,16 @@ class Tensor:
         return self.__mul__(other)
 
     def __matmul__(self, other):
-        if not isinstance(other, Tensor):
-            return NotImplemented
         other = self._coerce_operand(other)
+        if other is NotImplemented:
+            return NotImplemented
         return MatMul()(self, other)
+
+    def __rmatmul__(self, other):
+        other = self._coerce_operand(other)
+        if other is NotImplemented:
+            return NotImplemented
+        return MatMul()(other, self)
 
     def __truediv__(self, other):
         other = self._coerce_operand(other)
