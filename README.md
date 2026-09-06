@@ -1,80 +1,101 @@
 # PyGrad
 
-A lightweight automatic differentiation library implementing dynamic computation
-graph construction and reverse-mode autodiff, with NumPy and CuPy backends for
-CPU and GPU execution.
+PyGrad is a small automatic differentiation library implementing tensor
+operations, dynamic computation graphs, and reverse-mode differentiation. It
+uses NumPy on the CPU and can optionally use CuPy on a CUDA-capable GPU.
 
-## Development setup
+> [!NOTE]
+> PyGrad is an early-stage educational project. Its API and supported operations
+> are still growing.
 
-PyGrad keeps runtime dependencies in `pyproject.toml`. Development tools are
-declared in the `dev` optional dependency group instead of being mixed into
-the package users install.
+## Features
 
-```bash
-python -m venv .venv
-source .venv/bin/activate       # Windows: .venv\Scripts\activate
-python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+- Dynamic computation graphs with selective gradient tracking
+- Reverse-mode automatic differentiation
+- NumPy broadcasting in forward and backward operations
+- Element-wise arithmetic and matrix multiplication with NumPy/CuPy operands
+- Reshaping, transposing, summation, and averaging
+- Optional CuPy backend for CUDA devices
+- A text representation of the computation graph
+
+## Quick example
+
+```python
+from pygrad import Tensor
+from pygrad.optimizers.backprop import backward
+
+x = Tensor([2.0], requires_grad=True)
+y = Tensor([3.0], requires_grad=True)
+
+# z = xy + x²
+z = x * y + x**2
+backward(z)
+
+print(z.data) # [10.]
+print(x.grad) # [7.]
+print(y.grad) # [2.]
 ```
 
-Install the optional GPU backend when the matching CUDA runtime is available:
+Tensors opt into gradient tracking with `requires_grad=True`. Operations record
+only inputs that require gradients, and their results inherit gradient tracking.
+Calling `backward()` follows this graph in reverse and stores each gradient in
+the corresponding tensor's `.grad` attribute.
+
+## Installation
+
+PyGrad requires Python 3.10 or newer. To install the current source version:
+
+```bash
+git clone https://github.com/George573/PyGrad.git
+cd PyGrad
+python -m pip install -e .
+```
+
+For CUDA support, install the optional GPU dependencies instead:
 
 ```bash
 python -m pip install -e ".[gpu]"
 ```
 
-For reproducible development, use a lockfile tool such as
-[uv](https://docs.astral.sh/uv/):
+The GPU extra currently targets CUDA 12 through `cupy-cuda12x`. A compatible
+NVIDIA driver and CUDA environment are required.
+
+## Documentation
+
+- [Getting started](docs/getting-started.md) — install PyGrad and calculate your
+  first gradients
+- [Tensors](docs/user-guide/tensors.md) — create tensors and work with their
+  values and shapes
+- [Automatic differentiation](docs/user-guide/autodiff.md) — understand graphs,
+  backward passes, and gradient accumulation
+- [Operations](docs/user-guide/operations.md) — arithmetic, element-wise
+  functions, shape changes, and reductions
+- [Devices](docs/user-guide/devices.md) — CPU/CUDA behavior and current data-type
+  limitations
+- [API reference](docs/api/index.md) — exact signatures, parameters, and return
+  values
+
+More runnable programs are available in [`usage_examples`](usage_examples/).
+
+## Development
+
+Install the development dependencies and run the tests:
 
 ```bash
-uv sync --extra dev
-uv lock
+python -m pip install -e ".[dev]"
+pytest
 ```
 
-Commit `uv.lock` for an application or a development environment. For a
-reusable library, keep version ranges in `pyproject.toml` so pip can resolve
-compatible dependencies for each user's platform; use a lockfile for CI and
-local development.
+Format the project with `make style`, or check formatting without changing
+files with `make style-check`.
 
-## Code style
-
-Apply safe Ruff refactors, sort imports, and format all Python code with one
-command:
+Build source and wheel distributions with:
 
 ```bash
-make style
-```
-
-To verify style without changing files, run `make style-check`. The underlying
-cross-platform commands are `python scripts/style.py` and
-`python scripts/style.py --check`.
-
-## Building an installable package
-
-Build source and wheel distributions from the repository root:
-
-```bash
-python -m pip install --upgrade build
 python -m build
 ```
 
-The generated files are written to `dist/`. Test the wheel in a clean virtual
-environment before publishing:
+## License
 
-```bash
-python -m venv /tmp/pygrad-wheel-test
-/tmp/pygrad-wheel-test/bin/python -m pip install dist/pygrad-*.whl
-/tmp/pygrad-wheel-test/bin/python -c "import pygrad; print(pygrad.__version__)"
-```
-
-After registering a package name on PyPI, publish with a trusted publishing
-workflow from GitHub Actions or, for a one-off release:
-
-```bash
-python -m pip install twine
-python -m twine upload dist/*
-```
-
-Choose a new version in `pyproject.toml` for each release. Do not commit API
-tokens; configure them through PyPI trusted publishing or environment-backed
-credentials.
+PyGrad is distributed under the terms of the
+[GNU General Public License v2.0 or later](LICENSE).
