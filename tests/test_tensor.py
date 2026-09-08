@@ -1,6 +1,5 @@
 import numpy as np
 
-import pygrad.ops.operations as ops
 from pygrad import Tensor
 
 
@@ -19,10 +18,9 @@ def test_operation_does_not_track_inputs_without_gradients():
 
     result = left + right
 
-    assert isinstance(result.op, ops.Add)
+    assert result.op is None
     assert result.inputs == []
     assert result.requires_grad is False
-    assert result.op.inputs == (left, right)
 
 
 def test_operation_tracks_only_inputs_requiring_gradients():
@@ -51,6 +49,8 @@ def test_requires_grad_is_inherited_through_operations():
 def test_operations_reject_tensors_on_different_devices():
     left = Tensor(1.0)
     right = Tensor(2.0)
+    # Exercise the label guard without requiring a GPU. Real mixed-device
+    # arrays are covered separately in test_cuda.py.
     right.device = "cuda"
 
     with np.testing.assert_raises_regex(ValueError, "Cannot operate on tensor"):

@@ -6,7 +6,7 @@ class SGD:
         if not 0 <= momentum < 1:
             raise ValueError("momentum must be in the range [0, 1]")
 
-        self.trainable_params = trainable_params
+        self.trainable_params = list(trainable_params)
         self.epsilon = epsilon
         self.momentum = momentum
         self.velocity_table = {}

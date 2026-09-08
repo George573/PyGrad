@@ -18,13 +18,19 @@ from pygrad.optimizers.backprop import backward
         ("relu", [-2.0, 0.0, 3.0], [0.0, 0.0, 3.0], ops.ReLU),
     ],
 )
-def test_elementwise_forward(method, values, expected, operation_type):
-    value = Tensor(np.array(values))
+@pytest.mark.parametrize("requires_grad", [False, True])
+def test_elementwise_forward(method, values, expected, operation_type, requires_grad):
+    value = Tensor(np.array(values), requires_grad=requires_grad)
 
     result = getattr(value, method)()
 
     np.testing.assert_allclose(result.data, expected)
-    assert isinstance(result.op, operation_type)
+    assert result.shape == np.shape(expected)
+    assert result.requires_grad is requires_grad
+    if requires_grad:
+        assert isinstance(result.op, operation_type)
+    else:
+        assert result.op is None
 
 
 def test_abs_builtin_uses_elementwise_operation():
@@ -33,7 +39,7 @@ def test_abs_builtin_uses_elementwise_operation():
     result = abs(value)
 
     np.testing.assert_allclose(result.data, [2.0, 0.0, 3.0])
-    assert isinstance(result.op, ops.Abs)
+    assert result.op is None
 
 
 @pytest.mark.parametrize(
@@ -78,3 +84,37 @@ def test_sigmoid_is_stable_for_large_magnitudes():
 
     np.testing.assert_allclose(result.data, [0.0, 1.0], atol=1e-15)
     np.testing.assert_allclose(value.grad, [0.0, 0.0], atol=1e-15)
+
+
+@pytest.mark.parametrize(
+    "method,reference,values",
+    [
+        ("exp", np.exp, [-1.2, -0.3, 0.7]),
+        ("log", np.log, [0.3, 1.2, 2.5]),
+        ("sqrt", np.sqrt, [0.3, 1.2, 2.5]),
+        ("abs", np.abs, [-1.2, -0.3, 0.7]),
+        ("tanh", np.tanh, [-1.2, -0.3, 0.7]),
+        ("sigmoid", lambda x: 1 / (1 + np.exp(-x)), [-1.2, -0.3, 0.7]),
+        ("relu", lambda x: np.maximum(x, 0), [-1.2, -0.3, 0.7]),
+    ],
+)
+def test_array_backward_with_nonuniform_seed(
+    method, reference, values, numerical_gradients
+):
+    value = Tensor(values, requires_grad=True)
+    upstream = np.array([2.0, -0.5, 3.0], dtype=np.float32)
+    backward(getattr(value, method)(), upstream)
+    (expected,) = numerical_gradients(
+        lambda x: np.sum(reference(x) * upstream), [value.data]
+    )
+    assert value.grad.shape == value.shape
+    np.testing.assert_allclose(value.grad, expected, rtol=1e-5, atol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "method,expected", [("relu", [0.0, 0.0, 3.0]), ("abs", [-2.0, 0.0, 3.0])]
+)
+def test_mixed_sign_array_subgradients(method, expected):
+    value = Tensor([-2.0, 0.0, 4.0], requires_grad=True)
+    backward(getattr(value, method)(), np.array([2.0, -0.5, 3.0]))
+    np.testing.assert_allclose(value.grad, expected)

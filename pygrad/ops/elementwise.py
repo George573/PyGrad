@@ -4,6 +4,7 @@ from pygrad.ops.ops import Ops
 
 class UnaryElementwise(Ops):
     def __call__(self, a):
+        super().__call__()
         self.inputs = (a,)
         return self.create_tensor(self.forward(), op=self, input_tensors=self.inputs)
 

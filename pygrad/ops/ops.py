@@ -1,6 +1,7 @@
 class Ops:
     def __init__(self, *inputs):
         self.inputs = inputs
+        self.have_been_called = False
 
     @staticmethod
     def create_tensor(data, op, input_tensors):
@@ -16,7 +17,7 @@ class Ops:
         return Tensor(
             data,
             device=device,
-            op=op,
+            op=op if inputs else None,
             inputs=inputs or None,
             requires_grad=bool(inputs),
         )
@@ -26,6 +27,11 @@ class Ops:
 
     def __str__(self):
         return f"{self.__class__.__name__}"
+
+    def __call__(self, *args, **kwds):
+        if self.have_been_called:
+            raise RuntimeError(f"This instance can only be called once {self!s}")
+        self.have_been_called = True
 
     def forward(self):
         raise NotImplementedError(f"Forward method not implemented {self!s}.")

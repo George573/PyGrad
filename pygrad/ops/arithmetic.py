@@ -13,6 +13,7 @@ class Add(Ops):
         return (unbroadcast(grad, a.shape), unbroadcast(grad, b.shape))
 
     def __call__(self, a, b):
+        super().__call__()
         self.inputs = (a, b)
         return self.create_tensor(self.forward(), op=self, input_tensors=self.inputs)
 
@@ -27,6 +28,7 @@ class Sub(Ops):
         return (unbroadcast(grad, a.shape), unbroadcast(-grad, b.shape))
 
     def __call__(self, a, b):
+        super().__call__()
         self.inputs = (a, b)
         return self.create_tensor(self.forward(), op=self, input_tensors=self.inputs)
 
@@ -44,6 +46,7 @@ class Mul(Ops):
         )
 
     def __call__(self, a, b):
+        super().__call__()
         self.inputs = (a, b)
         return self.create_tensor(self.forward(), op=self, input_tensors=self.inputs)
 
@@ -79,6 +82,7 @@ class MatMul(Ops):
         return (unbroadcast(grad_a, a.shape), unbroadcast(grad_b, b.shape))
 
     def __call__(self, a, b):
+        super().__call__()
         self.inputs = (a, b)
         return self.create_tensor(self.forward(), op=self, input_tensors=self.inputs)
 
@@ -96,6 +100,7 @@ class Div(Ops):
         )
 
     def __call__(self, a, b):
+        super().__call__()
         self.inputs = (a, b)
         return self.create_tensor(self.forward(), op=self, input_tensors=self.inputs)
 
@@ -108,10 +113,26 @@ class Pow(Ops):
     def backward(self, grad):
         a, b = self.inputs
         xp = get_array_module(a.data)
-        grad_a = b.data * (a.data ** (b.data - 1)) * grad
-        grad_b = (a.data**b.data) * xp.log(a.data) * grad
-        return (unbroadcast(grad_a, a.shape), unbroadcast(grad_b, b.shape))
+
+        grad_a = None
+        grad_b = None
+
+        if a.requires_grad:
+            zero_exponent = b.data == 0
+            safe_exponent = xp.where(zero_exponent, 1, b.data)
+
+            derivative = safe_exponent * a.data ** (safe_exponent - 1)
+            derivative = xp.where(zero_exponent, 0, derivative)
+
+            grad_a = unbroadcast(grad * derivative, a.shape)
+
+        if b.requires_grad:
+            derivative = (a.data**b.data) * xp.log(a.data)
+            grad_b = unbroadcast(derivative * grad, b.shape)
+
+        return grad_a, grad_b
 
     def __call__(self, a, b):
+        super().__call__()
         self.inputs = (a, b)
         return self.create_tensor(self.forward(), op=self, input_tensors=self.inputs)

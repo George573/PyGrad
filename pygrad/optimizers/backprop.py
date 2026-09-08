@@ -44,25 +44,41 @@ def backward(last_node, gradient=None):
                 f"gradient shape {gradient.shape} does not match "
                 f"output shape {last_node.shape}"
             )
-    last_node.grad = gradient
 
     wait_queue = deque()
     wait_queue.append(last_node)
     pending = pending_grads(last_node)
+
+    grad_table = {last_node: gradient}
 
     while wait_queue:
         n = wait_queue.popleft()
 
         if n.op is None:
             continue
-        input_grad = n.op.backward(n.grad)
+        input_grad = n.op.backward(grad_table[n])
+        if len(n.op.inputs) != len(input_grad):
+            raise RuntimeError(
+                f"Node: {n} has {len(n.op.inputs)} inputs"
+                f" but {len(input_grad)} input gradients"
+                f" {n.op!s} must have a bug"
+            )
         for p, p_grad in zip(n.op.inputs, input_grad):
             if not p.requires_grad:
                 continue
-            if p.grad is not None:
-                p.grad = p.grad + p_grad
+            if p.shape != p_grad.shape:
+                raise RuntimeError(
+                    f"Gradient shape mismatch: "
+                    f"Node {p!s} has shape: {p.shape}"
+                    f", when it's gradient: {p_grad.shape}"
+                )
+            if p in grad_table:
+                grad_table[p] = grad_table[p] + p_grad
             else:
-                p.grad = p_grad
+                grad_table[p] = p_grad
             pending[p] -= 1
             if pending[p] == 0:
                 wait_queue.append(p)
+
+    for node, node_grad in grad_table.items():
+        node.grad = node_grad if node.grad is None else node.grad + node_grad

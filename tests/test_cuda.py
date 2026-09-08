@@ -95,7 +95,7 @@ def test_cuda_reduction_and_shape_operations():
 
     assert_gpu_tensor(value.sum(axis=0), [4.0, 6.0])
     assert_gpu_tensor(value.mean(), 2.5)
-    assert_gpu_tensor(value.reshape(4).transpose().flatten(), [1.0, 2.0, 3.0, 4.0])
+    assert_gpu_tensor(value.transpose().flatten(), [1.0, 3.0, 2.0, 4.0])
 
 
 @pytest.mark.parametrize(
@@ -118,7 +118,7 @@ def test_cuda_matmul_forward(left, right, expected):
 
 
 def test_cuda_composed_backward_and_gradient_device():
-    value = Tensor([1.0, 2.0, 3.0], device="cuda")
+    value = Tensor([1.0, 2.0, 3.0], device="cuda", requires_grad=True)
     sigmoid = value.sigmoid()
     loss = (sigmoid * value + 2).mean()
 
@@ -142,3 +142,32 @@ def test_cuda_matrix_vector_backward():
     assert isinstance(right.grad, cp.ndarray)
     np.testing.assert_allclose(cp.asnumpy(left.grad), [[5.0, 6.0], [5.0, 6.0]])
     np.testing.assert_allclose(cp.asnumpy(right.grad), [4.0, 6.0])
+
+
+def test_cuda_negative_transpose_backward():
+    value = Tensor(np.arange(24).reshape(2, 3, 4), device="cuda", requires_grad=True)
+    output = value.transpose((0, -1, 1))
+    upstream = np.arange(24, dtype=np.float32).reshape(2, 4, 3)
+    backward(output, cp.asarray(upstream))
+    assert isinstance(value.grad, cp.ndarray)
+    assert value.grad.shape == value.shape
+    np.testing.assert_array_equal(cp.asnumpy(value.grad), upstream.transpose(0, 2, 1))
+
+
+def test_cuda_repeated_backward_accumulates_on_device():
+    value = Tensor([2.0, 3.0], device="cuda", requires_grad=True)
+    loss = (value * value).sum()
+    backward(loss)
+    backward(loss)
+    assert isinstance(value.grad, cp.ndarray)
+    np.testing.assert_allclose(cp.asnumpy(value.grad), [8.0, 12.0])
+    np.testing.assert_allclose(cp.asnumpy(loss.grad), 2.0)
+
+
+def test_real_mixed_device_operands_are_rejected():
+    cpu = Tensor([1.0])
+    gpu = Tensor([1.0], device="cuda")
+    with pytest.raises(ValueError, match="Cannot operate on tensor"):
+        cpu + gpu
+    with pytest.raises(ValueError, match="Cannot operate on tensor"):
+        gpu + cpu

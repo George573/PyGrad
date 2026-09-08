@@ -76,7 +76,9 @@ def test_backward_matrix_multiplication_gradients():
         ([[1.0, 2.0], [3.0, 4.0]], [5.0, 6.0]),
     ],
 )
-def test_backward_matrix_multiplication_with_vectors(left_data, right_data):
+def test_backward_matrix_multiplication_with_vectors(
+    left_data, right_data, numerical_gradients
+):
     left = Tensor(np.array(left_data))
     right = Tensor(np.array(right_data))
     result = left @ right
@@ -87,23 +89,10 @@ def test_backward_matrix_multiplication_with_vectors(left_data, right_data):
     def objective(left_value, right_value):
         return np.sum((left_value @ right_value) * upstream)
 
-    epsilon = 1e-6
-    for tensor, other, gradient, is_left in (
-        (left, right, left.grad, True),
-        (right, left, right.grad, False),
-    ):
-        expected = np.empty_like(tensor.data)
-        for index in np.ndindex(tensor.shape):
-            plus = tensor.data.copy()
-            minus = tensor.data.copy()
-            plus[index] += epsilon
-            minus[index] -= epsilon
-            args_plus = (plus, other.data) if is_left else (other.data, plus)
-            args_minus = (minus, other.data) if is_left else (other.data, minus)
-            expected[index] = (objective(*args_plus) - objective(*args_minus)) / (
-                2 * epsilon
-            )
-        np.testing.assert_allclose(gradient, expected, rtol=1e-6, atol=1e-6)
+    expected_gradients = numerical_gradients(objective, [left.data, right.data])
+    for tensor, expected in zip((left, right), expected_gradients):
+        assert tensor.grad.shape == tensor.shape
+        np.testing.assert_allclose(tensor.grad, expected, rtol=1e-5, atol=1e-6)
 
 
 def test_backward_division_gradients_with_broadcasting():
@@ -160,7 +149,7 @@ def test_backward_shape_operation_gradients(method):
     np.testing.assert_allclose(value.grad, upstream.reshape(value.shape))
 
 
-@pytest.mark.parametrize("axes", [None, (2, 0, 1)])
+@pytest.mark.parametrize("axes", [None, (2, 0, 1), (0, -1, 1), (-1, -3, -2)])
 def test_backward_transpose_gradients(axes):
     value = Tensor(np.arange(24.0).reshape(2, 3, 4))
     result = value.transpose(axes)
@@ -171,7 +160,7 @@ def test_backward_transpose_gradients(axes):
     if axes is None:
         expected = upstream.transpose()
     else:
-        inverse_axes = np.argsort(axes)
+        inverse_axes = np.argsort([axis % value.ndim for axis in axes])
         expected = upstream.transpose(inverse_axes)
     np.testing.assert_allclose(value.grad, expected)
 

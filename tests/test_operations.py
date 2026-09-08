@@ -17,14 +17,22 @@ from pygrad import Tensor
         (operator.pow, ops.Pow, [1.0, 32.0, 729.0]),
     ],
 )
-def test_elementwise_binary_operation_values(operation, operation_type, expected):
-    left = Tensor(np.array([1.0, 2.0, 3.0]))
+@pytest.mark.parametrize("requires_grad", [False, True])
+def test_elementwise_binary_operation_values(
+    operation, operation_type, expected, requires_grad
+):
+    left = Tensor(np.array([1.0, 2.0, 3.0]), requires_grad=requires_grad)
     right = Tensor(np.array([4.0, 5.0, 6.0]))
 
     result = operation(left, right)
 
     np.testing.assert_allclose(result.data, expected)
-    assert isinstance(result.op, operation_type)
+    assert result.shape == np.shape(expected)
+    assert result.requires_grad is requires_grad
+    if requires_grad:
+        assert isinstance(result.op, operation_type)
+    else:
+        assert result.op is None
 
 
 def test_negation_values():
@@ -33,7 +41,7 @@ def test_negation_values():
     result = -value
 
     np.testing.assert_allclose(result.data, [-1.0, 2.0, -3.0])
-    assert isinstance(result.op, ops.Neg)
+    assert result.op is None
 
 
 def test_addition_broadcasts_values():
@@ -60,26 +68,27 @@ def test_matrix_multiplication_values():
     result = left @ right
 
     np.testing.assert_allclose(result.data, [[22.0, 28.0], [49.0, 64.0]])
-    assert isinstance(result.op, ops.MatMul)
+    assert result.op is None
     assert result.shape == (2, 2)
 
 
 @pytest.mark.parametrize(
-    ("method", "kwargs", "expected", "operation_type"),
+    ("method", "kwargs", "expected"),
     [
-        ("sum", {}, 21.0, ops.Sum),
-        ("sum", {"axis": 0}, [5.0, 7.0, 9.0], ops.Sum),
-        ("mean", {}, 3.5, ops.Mean),
-        ("mean", {"axis": 1, "keepdims": True}, [[2.0], [5.0]], ops.Mean),
+        ("sum", {}, 21.0),
+        ("sum", {"axis": 0}, [5.0, 7.0, 9.0]),
+        ("mean", {}, 3.5),
+        ("mean", {"axis": 1, "keepdims": True}, [[2.0], [5.0]]),
     ],
 )
-def test_reduction_values(method, kwargs, expected, operation_type):
+def test_reduction_values(method, kwargs, expected):
     value = Tensor(np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]))
 
     result = getattr(value, method)(**kwargs)
 
     np.testing.assert_allclose(result.data, expected)
-    assert isinstance(result.op, operation_type)
+    assert result.shape == np.shape(expected)
+    assert result.op is None
 
 
 def test_reshape_and_flatten_values():
@@ -90,8 +99,8 @@ def test_reshape_and_flatten_values():
 
     np.testing.assert_allclose(reshaped.data, [[1.0, 2.0], [3.0, 4.0]])
     np.testing.assert_allclose(flattened.data, [1.0, 2.0, 3.0, 4.0])
-    assert isinstance(reshaped.op, ops.Reshape)
-    assert isinstance(flattened.op, ops.Flatten)
+    assert reshaped.op is None
+    assert flattened.op is None
 
 
 def test_transpose_values_with_explicit_axes():
@@ -100,7 +109,7 @@ def test_transpose_values_with_explicit_axes():
     result = value.transpose((2, 0, 1))
 
     np.testing.assert_allclose(result.data, value.data.transpose((2, 0, 1)))
-    assert isinstance(result.op, ops.Transpose)
+    assert result.op is None
     assert result.shape == (4, 2, 3)
 
 

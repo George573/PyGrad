@@ -15,6 +15,7 @@ class Sum(Ops):
         return (xp.broadcast_to(grad, a.shape),)
 
     def __call__(self, a, axis=None, keepdims=False):
+        super().__call__()
         self.inputs = (a,)
         self.axis = axis
         self.keepdims = keepdims
@@ -42,6 +43,7 @@ class Mean(Ops):
         return (xp.broadcast_to(grad / count, a.shape),)
 
     def __call__(self, a, axis=None, keepdims=False):
+        super().__call__()
         self.inputs = (a,)
         self.axis = axis
         self.keepdims = keepdims
